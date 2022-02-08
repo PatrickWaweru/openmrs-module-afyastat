@@ -484,4 +484,48 @@
         </insert>
     </changeSet>
 
+    <!--Optimizing outgoing registration by saving queue on DB -->
+    <changeSet author="pwaweru" id="afyastat-20220208-4">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="afyastat_medicoutgoingregistration"/></not>
+        </preConditions>
+        <comment>Create the department table</comment>
+        <createTable tableName="afyastat_medicoutgoingregistration">
+            <column autoIncrement="true" name="id" type="int">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="patient_id" type="int" />
+            <column name="cht_ref" type="varchar(255)" />
+            <column name="kemr_ref" type="varchar(255)" />
+            <column name="purpose" type="varchar(255)" />
+            <column name="payload" type="varchar(255)" />
+            <column name="status" type="int" />
+            <column name="uuid" type="char(38)" />
+
+            <column name="creator" defaultValueNumeric="0" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="retired" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retired_by" type="int"/>
+            <column name="date_retired" type="datetime"/>
+            <column name="retire_reason" type="varchar(255)"/>
+
+            <column defaultValueBoolean="true" name="voided" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="INT"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="VARCHAR(255)"/>
+
+            <column name="owner" type="int"/>
+        </createTable>
+    </changeSet>
+
 </databaseChangeLog>
