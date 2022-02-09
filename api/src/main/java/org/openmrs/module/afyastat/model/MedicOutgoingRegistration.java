@@ -18,22 +18,22 @@ public class MedicOutgoingRegistration extends BaseOpenmrsData implements Serial
 	@Column(name = "id")
 	private Integer id;
 	
-	@Column(name = "patient_id")
+	@Column(name = "patient_id", nullable = false)
 	private Integer patient_id;
 	
-	@Column(name = "cht_ref")
+	@Column(name = "cht_ref", nullable = true, length = 512)
 	private String cht_ref;
 	
-	@Column(name = "kemr_ref")
+	@Column(name = "kemr_ref", nullable = false, length = 512)
 	private String kemr_ref;
 	
-	@Column(name = "purpose")
+	@Column(name = "purpose", nullable = false, length = 512)
 	private String purpose;
 	
-	@Column(name = "payload")
+	@Column(name = "payload", nullable = false, length = 512)
 	private String payload;
 	
-	@Column(name = "status")
+	@Column(name = "status", nullable = false)
 	private Integer status;
 	
 	/**
