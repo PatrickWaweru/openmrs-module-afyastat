@@ -87,6 +87,7 @@ public class PushContactsToMedicMobileTask extends AbstractTask {
 			
 			if (serverUrl != null && username != null && pwd != null && hasData) {
 				String payload = contactWrapper.toString();
+				System.out.println("AfyaStat Registration Feedback Task Payload dump: " + payload);
 				CloseableHttpClient httpClient = HttpClients.createDefault();
 				
 				try {

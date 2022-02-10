@@ -1532,6 +1532,8 @@ public class MedicDataExchange {
 			q.append(" where p.date_created >= '" + effectiveDate + "'");
 		}
 		
+		System.out.println("AfyaStat Registration Feedback Task Query Is: " + q.toString());
+		
 		List<List<Object>> activeList = Context.getAdministrationService().executeSQL(q.toString(), true);
 		Date nextFetchDate = new Date();
 		
