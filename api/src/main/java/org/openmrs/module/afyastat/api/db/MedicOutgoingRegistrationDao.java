@@ -49,6 +49,21 @@ public class MedicOutgoingRegistrationDao {
 		return (MedicOutgoingRegistration) getSession().get(MedicOutgoingRegistration.class, id);
 	}
 	
+	public MedicOutgoingRegistration getRecordByPatientId(Integer ptId) {
+		return (MedicOutgoingRegistration) getSession().createCriteria(MedicOutgoingRegistration.class)
+		        .add(Restrictions.eq("patientId", ptId)).uniqueResult();
+	}
+
+	public MedicOutgoingRegistration getRecordByChtRef(String chtRef) {
+		return (MedicOutgoingRegistration) getSession().createCriteria(MedicOutgoingRegistration.class)
+		        .add(Restrictions.eq("chtRef", chtRef)).uniqueResult();
+	}
+
+	public MedicOutgoingRegistration getRecordByKemrRef(String kemrRef) {
+		return (MedicOutgoingRegistration) getSession().createCriteria(MedicOutgoingRegistration.class)
+		        .add(Restrictions.eq("kemrRef", kemrRef)).uniqueResult();
+	}
+	
 	public void purgeRecord(MedicOutgoingRegistration record) {
 		getSession().delete(record);
 	}

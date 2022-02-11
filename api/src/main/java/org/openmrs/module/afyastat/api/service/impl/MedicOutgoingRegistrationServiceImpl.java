@@ -150,4 +150,37 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	public void recordSetStatus(Integer id, Integer status) {
 		dao.recordSetStatus(id, status);
 	}
+	
+	/**
+	 * Gets a record for a given patient id.
+	 * 
+	 * @param ptId the record ptId
+	 * @return the record with the given patient id
+	 */
+	@Override
+	public MedicOutgoingRegistration getRecordByPatientId(Integer ptId) {
+		return (dao.getRecordByPatientId(ptId));
+	}
+
+	/**
+	 * Gets a record for a given chtRef.
+	 * 
+	 * @param chtRef the record chtRef
+	 * @return the record with the given chtRef
+	 */
+	@Override
+	public MedicOutgoingRegistration getRecordByChtRef(String chtRef) {
+		return (dao.getRecordByChtRef(chtRef));
+	}
+
+	/**
+	 * Gets a record for a given kemrRef.
+	 * 
+	 * @param kemrRef the record kemrRef
+	 * @return the record with the given kemrRef
+	 */
+	@Override
+	public MedicOutgoingRegistration getRecordByKemrRef(String kemrRef) {
+		return (dao.getRecordByKemrRef(kemrRef));
+	}
 }

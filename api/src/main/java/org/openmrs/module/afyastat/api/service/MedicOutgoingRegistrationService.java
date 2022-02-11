@@ -67,6 +67,33 @@ public interface MedicOutgoingRegistrationService extends OpenmrsService {
 	MedicOutgoingRegistration getRecordById(Integer id);
 	
 	/**
+	 * Gets a record for a given patient id.
+	 * 
+	 * @param ptId the record ptId
+	 * @return the record with the given patient id
+	 */
+	@Transactional(readOnly = true)
+	MedicOutgoingRegistration getRecordByPatientId(Integer ptId);
+
+	/**
+	 * Gets a record for a given chtRef.
+	 * 
+	 * @param chtRef the record chtRef
+	 * @return the record with the given chtRef
+	 */
+	@Transactional(readOnly = true)
+	public MedicOutgoingRegistration getRecordByChtRef(String chtRef);
+
+	/**
+	 * Gets a record for a given kemrRef.
+	 * 
+	 * @param kemrRef the record kemrRef
+	 * @return the record with the given kemrRef
+	 */
+	@Transactional(readOnly = true)
+	public MedicOutgoingRegistration getRecordByKemrRef(String kemrRef);
+	
+	/**
 	 * Deletes a record from the database.
 	 * 
 	 * @param record the record to delete.

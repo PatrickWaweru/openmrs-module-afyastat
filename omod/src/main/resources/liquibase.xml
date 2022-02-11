@@ -485,26 +485,26 @@
     </changeSet>
 
     <!--Optimizing outgoing registration by saving queue on DB -->
-    <changeSet author="pwaweru" id="afyastat-20220208-4">
+    <changeSet author="pwaweru" id="afyastat-medicOutgoingRegistration-queue-20220210-7">
         <preConditions onFail="MARK_RAN">
-            <not><tableExists tableName="afyastat_medicoutgoingregistration"/></not>
+            <not><tableExists tableName="kenyaemr_afyastat_medicoutgoingregistration"/></not>
         </preConditions>
-        <comment>Create the department table</comment>
-        <createTable tableName="afyastat_medicoutgoingregistration">
+        <comment>Create the medicoutgoingregistration table</comment>
+        <createTable tableName="kenyaemr_afyastat_medicoutgoingregistration">
             <column autoIncrement="true" name="id" type="int">
                 <constraints primaryKey="true" nullable="false" />
             </column>
-            <column name="patient_id" type="int">
+            <column name="patientId" type="int">
                 <constraints nullable="false"/>
             </column>
-            <column name="cht_ref" type="varchar(255)" />
-            <column name="kemr_ref" type="varchar(255)">
+            <column name="chtRef" type="varchar(255)" />
+            <column name="kemrRef" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="purpose" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="payload" type="varchar(255)">
+            <column name="payload" type="varchar(4096)">
                 <constraints nullable="false"/>
             </column>
             <column name="status" type="int" defaultValueNumeric="0"/>
@@ -535,24 +535,49 @@
             <column name="owner" type="int"/>
         </createTable>
 
-        <createIndex indexName="index_date_created" tableName="afyastat_medicoutgoingregistration">
+        <createIndex indexName="index_date_created" tableName="kenyaemr_afyastat_medicoutgoingregistration">
             <column name="date_created"/>
         </createIndex>
-        <createIndex indexName="index_patient_id" tableName="afyastat_medicoutgoingregistration">
-            <column name="patient_id"/>
+        <createIndex indexName="index_patient_id" tableName="kenyaemr_afyastat_medicoutgoingregistration">
+            <column name="patientId"/>
         </createIndex>
-        <createIndex indexName="index_status" tableName="afyastat_medicoutgoingregistration">
+        <createIndex indexName="index_status" tableName="kenyaemr_afyastat_medicoutgoingregistration">
             <column name="status"/>
         </createIndex>
-        <createIndex indexName="index_purpose" tableName="afyastat_medicoutgoingregistration">
+        <createIndex indexName="index_purpose" tableName="kenyaemr_afyastat_medicoutgoingregistration">
             <column name="purpose"/>
         </createIndex>
-        <createIndex indexName="index_kemr_ref" tableName="afyastat_medicoutgoingregistration">
-            <column name="kemr_ref"/>
+        <createIndex indexName="index_kemr_ref" tableName="kenyaemr_afyastat_medicoutgoingregistration">
+            <column name="kemrRef"/>
         </createIndex>
-        <createIndex indexName="index_cht_ref" tableName="afyastat_medicoutgoingregistration">
-            <column name="cht_ref"/>
+        <createIndex indexName="index_cht_ref" tableName="kenyaemr_afyastat_medicoutgoingregistration">
+            <column name="chtRef"/>
         </createIndex>
+    </changeSet>
+
+    <!--Adding scheduled task to push contact list to the Medic Mobile system -->
+    <changeSet id="afyastat-medicOutgoingRegistration-queueing-task-20220210-6" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM scheduler_task_config
+                WHERE schedulable_class = 'org.openmrs.module.afyastat.task.QueueContactsToMedicMobileTask'
+                And name = 'Queue Contact list to Medic Mobile CHT system'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting processor for queueing records to CHT into 'schedule_task_config' table</comment>
+        <insert tableName="scheduler_task_config">
+            <column name="name" value="Queue Contact list to Medic Mobile CHT system" />
+            <column name="description" value="Queue Contact list to Medic Mobile CHT" />
+            <column name="schedulable_class" value="org.openmrs.module.afyastat.task.QueueContactsToMedicMobileTask" />
+            <column name="start_time_pattern" value="MM/dd/yyyy HH:mm:ss" />
+            <column name="start_time" valueDate="2022-01-01T23:59:59" />
+            <column name="repeat_interval" value="60" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="created_by" value="1" />
+            <column name="start_on_startup" value="1" />
+            <column name="started" value="0" />
+            <column name="uuid" value="e8f35121-c569-479b-c1d7-6c713fd72198" />
+        </insert>
     </changeSet>
 
 </databaseChangeLog>

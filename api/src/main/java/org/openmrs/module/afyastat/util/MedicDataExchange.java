@@ -34,9 +34,11 @@ import org.openmrs.api.ProgramWorkflowService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.afyastat.api.AfyastatService;
 import org.openmrs.module.afyastat.api.service.InfoService;
+import org.openmrs.module.afyastat.api.service.MedicOutgoingRegistrationService;
 import org.openmrs.module.afyastat.api.service.MedicQueData;
 import org.openmrs.module.afyastat.metadata.AfyaStatMetadata;
 import org.openmrs.module.afyastat.model.AfyaDataSource;
+import org.openmrs.module.afyastat.model.MedicOutgoingRegistration;
 import org.openmrs.module.hivtestingservices.api.HTSService;
 import org.openmrs.module.hivtestingservices.api.PatientContact;
 import org.openmrs.module.kenyaemr.api.KenyaEmrService;
@@ -1047,6 +1049,73 @@ public class MedicDataExchange {
 		responseWrapper.put("docs", patientContactNode);
 		responseWrapper.put("timestamp", responseObject.getTimestamp());
 		return responseWrapper;
+	}
+	
+	/**
+	 * Queue contacts for tracing
+	 * 
+	 * @return
+	 */
+	public boolean queueContacts() {
+		
+		GlobalProperty globalPropertyObject = Context.getAdministrationService().getGlobalPropertyObject(
+		    AfyaStatMetadata.AFYASTAT_CONTACT_LIST_LAST_FETCH_TIMESTAMP);
+		if (globalPropertyObject == null) {
+			System.out.println("Missing required global property: "
+			        + AfyaStatMetadata.AFYASTAT_CONTACT_LIST_LAST_FETCH_TIMESTAMP);
+			return (false);
+		}
+		
+		// Get registered contacts in the EMR. These will potentially have no contacts
+		DataResponseObject responseObject = getRegisteredCHTContacts();
+		if (responseObject == null) {
+			return (false); // just notify the calling task
+		}
+		Set<Integer> patientList = responseObject.getPatientList();
+		if (patientList.size() > 0) {
+			System.err.println("AfyaStat Outgoing Registration Queueing These Contacts: " + patientList.size());
+			for (Integer ptId : patientList) {
+				JsonNodeFactory factory = getJsonNodeFactory();
+				ArrayNode patientContactNode = getJsonNodeFactory().arrayNode();
+				ArrayNode emptyContactNode = factory.arrayNode();
+				ObjectNode responseWrapper = factory.objectNode();
+
+				Patient patient = Context.getPatientService().getPatient(ptId);
+				ObjectNode contactWrapper = buildPatientNode(patient, true, "");
+				contactWrapper.put("contacts", emptyContactNode);
+				patientContactNode.add(contactWrapper);
+				
+				responseWrapper.put("docs", patientContactNode);
+				responseWrapper.put("timestamp", responseObject.getTimestamp());
+				
+				//get chtRef
+				//get kemrRef
+				//get purpose
+				
+				MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
+				        .getService(MedicOutgoingRegistrationService.class);
+				if (medicOutgoingRegistrationService.getRecordByPatientId(ptId) == null) {
+					MedicOutgoingRegistration record = new MedicOutgoingRegistration();
+					record.setPatientId(ptId);
+					record.setChtRef("chtRef");
+					record.setKemrRef("kemrRef");
+					record.setPurpose("purpose");
+					record.setPayload(responseWrapper.toString());
+					record.setStatus(0);
+					
+					System.err.println("AfyaStat Outgoing Registration Queue payload: " + responseWrapper.toString());
+					
+					medicOutgoingRegistrationService.saveRecord(record);
+				}
+			}
+		}
+		System.err.println("AfyaStat Outgoing Registration No Contacts to queue");
+		
+		// save this at the end just so that we take care of instances when there is no connectivity
+		globalPropertyObject.setPropertyValue(responseObject.getTimestamp());
+		Context.getAdministrationService().saveGlobalProperty(globalPropertyObject);
+		
+		return (true);
 	}
 	
 	/**
