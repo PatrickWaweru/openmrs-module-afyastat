@@ -3,6 +3,7 @@ package org.openmrs.module.afyastat.util;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.aspectj.apache.bcel.generic.ReturnaddressType;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -1079,43 +1080,69 @@ public class MedicDataExchange {
 				ArrayNode patientContactNode = getJsonNodeFactory().arrayNode();
 				ArrayNode emptyContactNode = factory.arrayNode();
 				ObjectNode responseWrapper = factory.objectNode();
-
+				
 				Patient patient = Context.getPatientService().getPatient(ptId);
-				ObjectNode contactWrapper = buildPatientNode(patient, true, "");
+				PatientContactListData returnData = buildPatientNodeForQueue(patient, true, "");
+				ObjectNode contactWrapper = returnData.getContactWrapper();
 				contactWrapper.put("contacts", emptyContactNode);
 				patientContactNode.add(contactWrapper);
 				
 				responseWrapper.put("docs", patientContactNode);
 				responseWrapper.put("timestamp", responseObject.getTimestamp());
 				
-				//get chtRef
-				//get kemrRef
-				//get purpose
-				
 				MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
 				        .getService(MedicOutgoingRegistrationService.class);
 				if (medicOutgoingRegistrationService.getRecordByPatientId(ptId) == null) {
 					MedicOutgoingRegistration record = new MedicOutgoingRegistration();
 					record.setPatientId(ptId);
-					record.setChtRef("chtRef");
-					record.setKemrRef("kemrRef");
-					record.setPurpose("purpose");
+					record.setChtRef(returnData.getChtRef());
+					record.setKemrRef(returnData.getKemrRef());
+					record.setPurpose(returnData.getPurpose());
 					record.setPayload(responseWrapper.toString());
 					record.setStatus(0);
 					
 					System.err.println("AfyaStat Outgoing Registration Queue payload: " + responseWrapper.toString());
 					
-					medicOutgoingRegistrationService.saveRecord(record);
+					medicOutgoingRegistrationService.saveOrUpdate(record);
 				}
 			}
 		}
 		System.err.println("AfyaStat Outgoing Registration No Contacts to queue");
 		
-		// save this at the end just so that we take care of instances when there is no connectivity
+		// save this at the end just so that we take care of instances when db is down
 		globalPropertyObject.setPropertyValue(responseObject.getTimestamp());
 		Context.getAdministrationService().saveGlobalProperty(globalPropertyObject);
 		
 		return (true);
+	}
+
+	/**
+	 * Get a list of payloads for sending to afyastat from the queue
+	 * 
+	 * @return List<MedicOutgoingRegistration> the list of payloads
+	 */
+	public List<MedicOutgoingRegistration> getQueuedPayloads()
+	{
+		MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
+				        .getService(MedicOutgoingRegistrationService.class);
+		List<MedicOutgoingRegistration> list = medicOutgoingRegistrationService.getRecordsByStatus(0);
+		if (list != null) {
+			return(list);
+		}
+
+		return(null);
+	}
+
+	/**
+	 * After sending the contact payload to afyastat, mark the status as one (1) 
+	 * 
+	 * @param id the queue id
+	 */
+	public void setContactQueuePayloadStatus(Integer id)
+	{
+		MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
+				        .getService(MedicOutgoingRegistrationService.class);
+		medicOutgoingRegistrationService.recordSetStatus(id, 1);
 	}
 	
 	/**
@@ -1459,6 +1486,137 @@ public class MedicDataExchange {
 		fields.put("assignee", assignee);
 		objectWrapper.put("fields", fields);
 		return objectWrapper;
+	}
+
+	private PatientContactListData buildPatientNodeForQueue(Patient patient, boolean newRegistration, String assignee) {
+		JsonNodeFactory factory = getJsonNodeFactory();
+		ObjectNode objectWrapper = factory.objectNode();
+		ObjectNode fields = factory.objectNode();
+		PatientContactListData returnData = new PatientContactListData();
+		
+		String sex = "";
+		String dateFormat = "yyyy-MM-dd";
+		
+		String fullName = "";
+		
+		if (patient.getGivenName() != null) {
+			fullName += patient.getGivenName();
+		}
+		
+		if (patient.getMiddleName() != null) {
+			fullName += " " + patient.getMiddleName();
+		}
+		
+		if (patient.getFamilyName() != null) {
+			fullName += " " + patient.getFamilyName();
+		}
+		
+		if (patient.getGender() != null) {
+			if (patient.getGender().equals("M")) {
+				sex = "male";
+			} else {
+				sex = "female";
+			}
+		}
+		
+		objectWrapper.put("_id", patient.getUuid());
+		objectWrapper.put("type", "data_record");
+		objectWrapper.put("form", "case_information");
+		if (newRegistration) {
+			objectWrapper.put("record_purpose", "testing");
+			returnData.setPurpose("testing");
+		} else {
+			objectWrapper.put("record_purpose", "linkage");
+			returnData.setPurpose("linkage");
+		}
+		objectWrapper.put("content_type", "xml");
+		objectWrapper.put("reported_date", patient.getDateCreated().getTime());
+		
+		PatientIdentifierType chtRefType = Context.getPatientService().getPatientIdentifierTypeByUuid(
+		    AfyaStatMetadata._PatientIdentifierType.CHT_RECORD_UUID);
+		//PatientIdentifier nationalId = patient.getPatientIdentifier(Utils.NATIONAL_ID);
+		PatientIdentifier chtReference = patient.getPatientIdentifier(chtRefType);
+		
+		PatientIdentifier parentChtRef = null;
+		String relType = null;
+		String parentName = "";
+		
+		// get address
+		
+		ObjectNode address = getPatientAddress(patient);
+		String nationality = address.get("NATIONALITY").getTextValue();
+		
+		String postalAddress = address.get("POSTAL_ADDRESS").getTextValue();
+		String county = address.get("COUNTY").getTextValue();
+		String subCounty = address.get("SUB_COUNTY").getTextValue();
+		String ward = address.get("WARD").getTextValue();
+		String landMark = address.get("NEAREST_LANDMARK").getTextValue();
+		
+		fields.put("needs_sign_off", false);
+		fields.put("case_id", patient.getUuid());
+		returnData.setKemrRef(patient.getUuid());
+		fields.put("cht_ref_uuid", chtReference != null ? chtReference.getIdentifier() : "");
+		returnData.setChtRef(chtReference != null ? chtReference.getIdentifier() : "");
+		
+		// add information about the client this contact was listed under
+		PatientContact originalContactRecord = htsService.getPatientContactEntryForPatient(patient);
+		if (originalContactRecord != null) {
+			Patient relatedPatient = originalContactRecord.getPatientRelatedTo(); // we want the cht ref for this client for use in cht/afyastat
+			parentChtRef = relatedPatient.getPatientIdentifier(chtRefType);
+			if (originalContactRecord.getRelationType() != null) {
+				relType = getContactRelation(originalContactRecord.getRelationType());
+			}
+			
+			if (relatedPatient.getGivenName() != null) {
+				parentName += relatedPatient.getGivenName();
+			}
+			
+			if (relatedPatient.getMiddleName() != null) {
+				parentName += " " + relatedPatient.getMiddleName();
+			}
+			
+			if (relatedPatient.getFamilyName() != null) {
+				parentName += " " + relatedPatient.getFamilyName();
+			}
+		}
+		
+		fields.put("relation_uuid", parentChtRef != null ? parentChtRef.getIdentifier() : "");
+		fields.put("relation_type", relType != null ? relType : "");
+		fields.put("relation_name", StringUtils.isNotBlank(parentName) ? parentName : "");
+		
+		fields.put("patient_familyName", patient.getFamilyName() != null ? patient.getFamilyName() : "");
+		fields.put("patient_firstName", patient.getGivenName() != null ? patient.getGivenName() : "");
+		fields.put("patient_middleName", patient.getMiddleName() != null ? patient.getMiddleName() : "");
+		fields.put("name", fullName);
+		fields.put("patient_name", fullName);
+		fields.put("patient_sex", sex);
+		fields.put("patient_birthDate",
+		    patient.getBirthdate() != null ? getSimpleDateFormat(dateFormat).format(patient.getBirthdate()) : "");
+		fields.put("patient_dobKnown", "_1066_No_99DCT");
+		fields.put("patient_telephone", getPersonAttributeByType(patient, phoneNumberAttrType));
+		fields.put("patient_nationality", nationality);
+		fields.put("patient_county", county);
+		fields.put("patient_subcounty", subCounty);
+		fields.put("patient_ward", ward);
+		fields.put("location", "");
+		fields.put("sub_location", "");
+		fields.put("patient_village", "");
+		fields.put("patient_landmark", landMark);
+		fields.put("patient_residence", postalAddress);
+		fields.put("patient_nearesthealthcentre", "");
+		
+		if (!newRegistration) {
+			Encounter encounter = Utils.lastEncounter(patient, et, Arrays.asList(initial, retest));
+			if (encounter != null) {
+				fields.put("date_tested_positive", getSimpleDateFormat(dateFormat).format(encounter.getEncounterDatetime()));
+			}
+		}
+		fields.put("assignee", assignee);
+		objectWrapper.put("fields", fields);
+
+		returnData.setContactWrapper(objectWrapper);
+
+		return returnData;
 	}
 	
 	private String getContactRelation(Integer key) {
@@ -2002,5 +2160,65 @@ public class MedicDataExchange {
 			this.timestamp = timestamp;
 		}
 	}
+
+    /**
+     * A class to hold contact list for patients
+     */
+    public static class PatientContactListData
+    {
+		/**
+		* Holds the JSON content
+		*/
+        private ObjectNode contactWrapper;
+
+		/**
+		* Holds the CHT ref
+		*/
+		private String chtRef;
+
+		/**
+		* Holds the KEMR ref
+		*/
+		private String kemrRef;
+
+		/**
+		* Holds the purpose
+		*/
+		private String purpose;
+
+		public ObjectNode getContactWrapper() {
+			return contactWrapper;
+		}
+
+		public void setContactWrapper(ObjectNode contactWrapper) {
+			this.contactWrapper = contactWrapper;
+		}
+
+		public String getChtRef() {
+			return chtRef;
+		}
+
+		public void setChtRef(String chtRef) {
+			this.chtRef = chtRef;
+		}
+
+		public String getKemrRef() {
+			return kemrRef;
+		}
+
+		public void setKemrRef(String kemrRef) {
+			this.kemrRef = kemrRef;
+		}
+
+		public String getPurpose() {
+			return purpose;
+		}
+
+		public void setPurpose(String purpose) {
+			this.purpose = purpose;
+		}
+
+		
+    }
 	
 }

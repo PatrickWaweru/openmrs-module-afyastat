@@ -61,14 +61,14 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	 * @throws APIException
 	 */
 	@Override
-	public MedicOutgoingRegistration saveRecord(MedicOutgoingRegistration record) throws APIException {
-		return dao.saveRecord(record);
+	public MedicOutgoingRegistration saveOrUpdate(MedicOutgoingRegistration record) throws APIException {
+		return dao.saveOrUpdate(record);
 	}
 	
 	/**
-	 * Gets a list of departments.
+	 * Gets a list of records.
 	 * 
-	 * @return the department list.
+	 * @return the record list.
 	 */
 	@Override
 	public List<MedicOutgoingRegistration> getAllRecords() {
@@ -76,10 +76,10 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	}
 	
 	/**
-	 * Gets a department for a given id.
+	 * Gets a record for a given id.
 	 * 
-	 * @param id the department id
-	 * @return the department with the given id
+	 * @param id the record id
+	 * @return the record with the given id
 	 */
 	@Override
 	public MedicOutgoingRegistration getRecordById(Integer id) {
@@ -87,7 +87,7 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	}
 	
 	/**
-	 * Deletes a department from the database.
+	 * Deletes a record from the database.
 	 * 
 	 * @param record the record to delete.
 	 */
@@ -161,7 +161,7 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	public MedicOutgoingRegistration getRecordByPatientId(Integer ptId) {
 		return (dao.getRecordByPatientId(ptId));
 	}
-
+	
 	/**
 	 * Gets a record for a given chtRef.
 	 * 
@@ -172,7 +172,7 @@ public class MedicOutgoingRegistrationServiceImpl extends BaseOpenmrsService imp
 	public MedicOutgoingRegistration getRecordByChtRef(String chtRef) {
 		return (dao.getRecordByChtRef(chtRef));
 	}
-
+	
 	/**
 	 * Gets a record for a given kemrRef.
 	 * 

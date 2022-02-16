@@ -23,8 +23,11 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.afyastat.metadata.AfyaStatMetadata;
+import org.openmrs.module.afyastat.model.MedicOutgoingRegistration;
 import org.openmrs.module.afyastat.util.MedicDataExchange;
 import org.openmrs.scheduler.tasks.AbstractTask;
+import java.util.List;
+import java.util.Iterator;
 
 /**
  * Periodically pushes registered contacts to Afyastat
@@ -69,64 +72,73 @@ public class PushContactsToMedicMobileTask extends AbstractTask {
 			MedicDataExchange e = new MedicDataExchange();
 			
 			// check if there are item(s) to post
-			ObjectNode contactWrapper = e.getContacts();
-			if (contactWrapper == null) {
+			List<MedicOutgoingRegistration> payloads = e.getQueuedPayloads();
+			if (payloads == null) {
 				System.out
 				        .println("Could not fetch registered contacts from the database. Please contact your system administrator for more troubleshooting");
 				log.error("Could not fetch registered contacts from the database. Please contact your system administrator for more troubleshooting");
 				return;
 			}
-			ArrayNode docs = (ArrayNode) contactWrapper.get("docs");
-			String nextFetchTimestamp = contactWrapper.get("timestamp").getTextValue();
 			
-			if (contactWrapper != null && docs.size() > 0) {
+			if (payloads != null && payloads.size() > 0) {
 				hasData = true;
 			}
 			
-			System.out.println("CHT Post request. Records found: " + docs.size());
+			System.out.println("CHT Post request. Records found: " + payloads.size());
 			
 			if (serverUrl != null && username != null && pwd != null && hasData) {
-				String payload = contactWrapper.toString();
-				System.out.println("AfyaStat Registration Feedback Task Payload dump: " + payload);
 				CloseableHttpClient httpClient = HttpClients.createDefault();
 				
-				try {
-					//Define a postRequest request
-					HttpPost postRequest = new HttpPost(serverUrl);
-					
-					//Set the API media type in http content-type header
-					postRequest.addHeader("content-type", "application/json");
-					
-					String auth = username.trim() + ":" + pwd.trim();
-					byte[] encodedAuth = Base64.encodeBase64(auth.getBytes("UTF-8"));
-					String authHeader = "Basic " + new String(encodedAuth);
-					postRequest.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
-					
-					//Set the request post body
-					StringEntity userEntity = new StringEntity(payload);
-					postRequest.setEntity(userEntity);
-					
-					//Send the request; It will immediately return the response in HttpResponse object if any
-					HttpResponse response = httpClient.execute(postRequest);
-					
-					//verify the valid error code first
-					int statusCode = response.getStatusLine().getStatusCode();
-					
-					if (statusCode != 200 && statusCode != 201) {
-						throw new RuntimeException("Failed with HTTP error code : " + statusCode);
+				//loop
+				Iterator<MedicOutgoingRegistration> payloadIterator = payloads.iterator();
+				while(payloadIterator.hasNext())
+				{
+					try {
+						//Define a postRequest request
+						HttpPost postRequest = new HttpPost(serverUrl);
+						
+						//Set the API media type in http content-type header
+						postRequest.addHeader("content-type", "application/json");
+						
+						String auth = username.trim() + ":" + pwd.trim();
+						byte[] encodedAuth = Base64.encodeBase64(auth.getBytes("UTF-8"));
+						String authHeader = "Basic " + new String(encodedAuth);
+						postRequest.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+						
+						//Set the request post body
+						MedicOutgoingRegistration mor = payloadIterator.next();
+						StringEntity userEntity = new StringEntity(mor.getPayload());
+						postRequest.setEntity(userEntity);
+						
+						//Send the request; It will immediately return the response in HttpResponse object if any
+						HttpResponse response = httpClient.execute(postRequest);
+						
+						//verify the valid error code first
+						int statusCode = response.getStatusLine().getStatusCode();
+						
+						if (statusCode != 200 && statusCode != 201) {
+							System.err.println("Failed with HTTP error code : " + statusCode);
+							log.info("Failed with HTTP error code : " + statusCode);
+						}
+						else {
+							//mark the upload as successfull
+							e.setContactQueuePayloadStatus(mor.getId());
+						}
+						
+						System.out.println("Successfully pushed a contact to Afyastat");
+						log.info("Successfully pushed a contact to Afyastat");
 					}
-					
-					// save this at the end just so that we take care of instances when there is no connectivity
-					globalPropertyObject.setPropertyValue(nextFetchTimestamp);
-					Context.getAdministrationService().saveGlobalProperty(globalPropertyObject);
-					
-					System.out.println("Successfully pushed contacts to Afyastat");
-					log.info("Successfully pushed contacts to Afyastat");
+					catch(Exception bn)
+					{
+						System.err.println("Failed to push a contact to Afyastat: " + bn.getMessage());
+						log.info("Failed to push a contact to Afyastat: " + bn.getMessage());
+					}
+					finally {
+						//Important: Close the connect
+						httpClient.close();
+					}
 				}
-				finally {
-					//Important: Close the connect
-					httpClient.close();
-				}
+				//end loop
 			}
 		}
 		catch (Exception e) {
