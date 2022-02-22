@@ -7,9 +7,17 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.afyastat.api.dao;
+package org.openmrs.module.afyastat.api.db;
 
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.openmrs.test.BaseModuleContextSensitiveTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+
+import static org.hamcrest.Matchers.is;
+import org.openmrs.module.afyastat.api.service.MedicQueData;
 
 /**
  * It is an integration test (extends BaseModuleContextSensitiveTest), which verifies DAO methods
@@ -17,6 +25,16 @@ import org.openmrs.test.BaseModuleContextSensitiveTest;
  * standardTestDataset.xml in openmrs-api. All test methods are executed in transactions, which are
  * rolled back by the end of each test method.
  */
+@ContextConfiguration({ "classpath*:TestingApplicationContext.xml" })
 public class AfyastatDaoTest extends BaseModuleContextSensitiveTest {
 	
+	// @Autowired
+	// private MedicQueData medicQueData;
+	
+	@Test
+	@Ignore("Unignore if you want to make the Item class persistable, see also Item and liquibase.xml")
+	public void daoTest() {
+		//run test
+		Assert.assertThat(true, is(true));
+	}
 }

@@ -1049,13 +1049,17 @@ public class MedicDataExchange {
 		patientContactNode.addAll(getKpPeerPeerEductorList());
 		responseWrapper.put("docs", patientContactNode);
 		responseWrapper.put("timestamp", responseObject.getTimestamp());
+		
+		//check payload
+		System.err.println("AfyaStat Outgoing Registration Old Full Payload: " + responseWrapper.toString());
+		
 		return responseWrapper;
 	}
 	
 	/**
-	 * Queue contacts for tracing
+	 * Queue contacts into the outgoing queue
 	 * 
-	 * @return
+	 * @return boolean true if successful, false if unsuccessful
 	 */
 	public boolean queueContacts() {
 		
@@ -1101,13 +1105,19 @@ public class MedicDataExchange {
 					record.setPayload(responseWrapper.toString());
 					record.setStatus(0);
 					
-					System.err.println("AfyaStat Outgoing Registration Queue payload: " + responseWrapper.toString());
+					System.err
+					        .println("AfyaStat Outgoing Registration Queue Contact payload: " + responseWrapper.toString());
 					
 					medicOutgoingRegistrationService.saveOrUpdate(record);
 				}
 			}
+		} else {
+			System.err.println("AfyaStat Outgoing Registration No Contacts to queue");
+			return (false);
 		}
-		System.err.println("AfyaStat Outgoing Registration No Contacts to queue");
+		
+		//check peers
+		//System.err.println("AfyaStat Outgoing Registration peers list: " + getKpPeerPeerEductorList().toString());
 		
 		// save this at the end just so that we take care of instances when db is down
 		globalPropertyObject.setPropertyValue(responseObject.getTimestamp());
@@ -1115,33 +1125,31 @@ public class MedicDataExchange {
 		
 		return (true);
 	}
-
+	
 	/**
 	 * Get a list of payloads for sending to afyastat from the queue
 	 * 
 	 * @return List<MedicOutgoingRegistration> the list of payloads
 	 */
-	public List<MedicOutgoingRegistration> getQueuedPayloads()
-	{
+	public List<MedicOutgoingRegistration> getQueuedPayloads() {
 		MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
-				        .getService(MedicOutgoingRegistrationService.class);
+		        .getService(MedicOutgoingRegistrationService.class);
 		List<MedicOutgoingRegistration> list = medicOutgoingRegistrationService.getRecordsByStatus(0);
 		if (list != null) {
-			return(list);
+			return (list);
 		}
-
-		return(null);
+		
+		return (null);
 	}
-
+	
 	/**
-	 * After sending the contact payload to afyastat, mark the status as one (1) 
+	 * After sending the contact payload to afyastat, mark the status as one (1)
 	 * 
 	 * @param id the queue id
 	 */
-	public void setContactQueuePayloadStatus(Integer id)
-	{
+	public void setContactQueuePayloadStatus(Integer id) {
 		MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
-				        .getService(MedicOutgoingRegistrationService.class);
+		        .getService(MedicOutgoingRegistrationService.class);
 		medicOutgoingRegistrationService.recordSetStatus(id, 1);
 	}
 	
@@ -1180,10 +1188,225 @@ public class MedicDataExchange {
 		return responseWrapper;
 	}
 	
+	/**
+	 * Inserts the list of peers and peer educators into the outgoing queue
+	 */
+	public void queueKpPeerPeerEductorList() {
+		String PREP_PROGRAM_UUID = "214cad1c-bb62-4d8e-b927-810a046daf62";
+		String KP_PROGRAM_UUID = "7447305a-18a7-11e9-ab14-d663bd873d93";
+		String CHTUSERNAME_ATTRIBUTETYPE_UUID = "1aaead2d-0e88-40b2-abcd-6bc3d20fa43c"; //cht username
+		Program prepProgram = MetadataUtils.existing(Program.class, PREP_PROGRAM_UUID);
+		Program kpProgram = MetadataUtils.existing(Program.class, KP_PROGRAM_UUID);
+		Program hivProgram = MetadataUtils.existing(Program.class, HivMetadata._Program.HIV);
+		ProgramWorkflowService programWorkflowService = Context.getProgramWorkflowService();
+		PersonAttributeType chtPersonAttributeType = personService
+		        .getPersonAttributeTypeByUuid(CHTUSERNAME_ATTRIBUTETYPE_UUID);
+		
+		JsonNodeFactory factory = getJsonNodeFactory();
+		//ArrayNode peersNode = getJsonNodeFactory().arrayNode();
+		//ObjectNode responseWrapper = factory.objectNode();
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+		
+		Set<Integer> peerEducatorList = getAllPeerEducatorsForKPProgram();
+		if (peerEducatorList.size() > 0) {
+			System.err.println("AfyaStat Outgoing Registration Found Peers, now parsing");
+			for (Integer ptId : peerEducatorList) {
+				
+				//ObjectNode peer = factory.objectNode();
+				//ObjectNode peerEducator = factory.objectNode();
+				
+				List<PatientProgram> peerEducatorPrepPrograms = programWorkflowService.getPatientPrograms(Context
+				        .getPatientService().getPatient(ptId), prepProgram, null, null, null, null, true);
+				
+				List<PatientProgram> peerEducatorHivPrograms = programWorkflowService.getPatientPrograms(Context
+				        .getPatientService().getPatient(ptId), hivProgram, null, null, null, null, true);
+				List<PatientProgram> kpPrograms = programWorkflowService.getPatientPrograms(Context.getPatientService()
+				        .getPatient(ptId), kpProgram, null, null, null, null, true);
+				String peerEducatorHivStatus = getClientHIVStatusCapturedOnKpClinicalEnrollment(ptId);
+				Patient patient = Context.getPatientService().getPatient(ptId);
+				Person p = personService.getPerson(ptId);
+				
+				String fullPeerEducatorName = "";
+				String peerEducatorAssignee = "";
+				if (p.getGivenName() != null) {
+					fullPeerEducatorName += p.getGivenName();
+				}
+				
+				if (p.getMiddleName() != null) {
+					fullPeerEducatorName += " " + p.getMiddleName();
+				}
+				
+				if (p.getFamilyName() != null) {
+					fullPeerEducatorName += " " + p.getFamilyName();
+				}
+				
+				System.err.println("AfyaStat Outgoing Registration Full Educator Name: " + fullPeerEducatorName);
+				
+				//start: Get those with cht username
+				if (p.getAttribute(chtPersonAttributeType) != null
+				        && p.getAttribute(chtPersonAttributeType).getValue() != null) {
+					peerEducatorAssignee = p.getAttribute(chtPersonAttributeType).getValue();
+					
+				}
+				if (!peerEducatorAssignee.equalsIgnoreCase("")) {
+					ArrayNode peerEducatorContactNode = getJsonNodeFactory().arrayNode();
+					ObjectNode responseWrapper = factory.objectNode();
+					
+					//peerEducator = buildPatientNode(patient, false, peerEducatorAssignee);
+					PatientContactListData returnData = buildPatientNodeForQueue(patient, false, peerEducatorAssignee);
+					ObjectNode peerEducator = returnData.getContactWrapper();
+					
+					if (peerEducatorHivPrograms.isEmpty() && peerEducatorPrepPrograms.isEmpty()
+					        && peerEducatorHivStatus.equalsIgnoreCase("NEGATIVE") && kpPrograms.size() > 0) {
+						peerEducator.put("record_purpose", "prep_verification");
+						//peersNode.add(peerEducator);
+						returnData.setPurpose("prep_verification");
+					} else if (peerEducatorHivPrograms.isEmpty() && peerEducatorHivStatus.equalsIgnoreCase("POSITIVE")
+					        && kpPrograms.size() > 0) {
+						peerEducator.put("record_purpose", "treatment_verification");
+						//peersNode.add(peerEducator);
+						returnData.setPurpose("treatment_verification");
+					} else {
+						if (kpPrograms.size() > 0) {
+							peerEducator.put("record_purpose", "kp_followup");
+							returnData.setPurpose("kp_followup");
+							if (peerEducator.size() > 0) {
+								//peersNode.add(peerEducator);
+							}
+						}
+					}
+					peerEducatorContactNode.add(peerEducator);
+					
+					responseWrapper.put("docs", peerEducatorContactNode);
+					responseWrapper.put("timestamp", formatter.format(new Date()));
+					
+					MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
+					        .getService(MedicOutgoingRegistrationService.class);
+					if (medicOutgoingRegistrationService.getRecordByPatientId(ptId) == null) {
+						MedicOutgoingRegistration record = new MedicOutgoingRegistration();
+						record.setPatientId(ptId);
+						record.setChtRef(returnData.getChtRef());
+						record.setKemrRef(returnData.getKemrRef());
+						record.setPurpose(returnData.getPurpose());
+						record.setPayload(responseWrapper.toString());
+						record.setStatus(0);
+						
+						System.err.println("AfyaStat Outgoing Registration Queue Peer Educator payload: "
+						        + responseWrapper.toString());
+						
+						medicOutgoingRegistrationService.saveOrUpdate(record);
+					}
+					
+				}
+				//end: Get those relationships with cht usernames
+				
+				for (Relationship relationship : Context.getPersonService().getRelationshipsByPerson(
+				    Context.getPatientService().getPatient(ptId))) {
+					
+					if (relationship.getRelationshipType().getbIsToA().equals("Peer") && relationship.getEndDate() == null) {
+						ArrayNode peerContactNode = getJsonNodeFactory().arrayNode();
+						ObjectNode responseWrapper = factory.objectNode();
+						
+						List<PatientProgram> peerPrepPrograms = programWorkflowService.getPatientPrograms(Context
+						        .getPatientService().getPatient(relationship.getPersonB().getId()), prepProgram, null, null,
+						    null, null, true);
+						
+						List<PatientProgram> peerHivPrograms = programWorkflowService.getPatientPrograms(Context
+						        .getPatientService().getPatient(relationship.getPersonB().getId()), hivProgram, null, null,
+						    null, null, true);
+						List<PatientProgram> kpPeerPrograms = programWorkflowService.getPatientPrograms(Context
+						        .getPatientService().getPatient(relationship.getPersonB().getId()), kpProgram, null, null,
+						    null, null, true);
+						String peerHivStatus = getClientHIVStatusCapturedOnKpClinicalEnrollment(relationship.getPersonB()
+						        .getId());
+						Patient peerPatient = Context.getPatientService().getPatient(relationship.getPersonB().getId());
+						
+						String fullName = "";
+						String assignee = "";
+						if (relationship.getPersonA().getGivenName() != null) {
+							fullName += relationship.getPersonA().getGivenName();
+						}
+						
+						if (relationship.getPersonA().getMiddleName() != null) {
+							fullName += " " + relationship.getPersonA().getMiddleName();
+						}
+						
+						if (relationship.getPersonA().getFamilyName() != null) {
+							fullName += " " + relationship.getPersonA().getFamilyName();
+						}
+						
+						System.err.println("AfyaStat Outgoing Registration Full Relation Name: " + fullName);
+						
+						//start: Get those with cht username
+						if (relationship.getPersonA().getAttribute(chtPersonAttributeType) != null
+						        && relationship.getPersonA().getAttribute(chtPersonAttributeType).getValue() != null) {
+							assignee = relationship.getPersonA().getAttribute(chtPersonAttributeType).getValue();
+							
+						}
+						
+						PatientContactListData returnData = buildPatientNodeForQueue(peerPatient, false, assignee);
+						ObjectNode peer = returnData.getContactWrapper();
+						
+						if (peerPrepPrograms.isEmpty() && peerHivPrograms.isEmpty()
+						        && peerHivStatus.equalsIgnoreCase("NEGATIVE") && kpPeerPrograms.size() > 0
+						        && !assignee.equalsIgnoreCase("")) {
+							//peer = buildPatientNode(peerPatient, false, assignee);
+							peer.put("record_purpose", "prep_verification");
+							returnData.setPurpose("prep_verification");
+						} else if (peerHivPrograms.isEmpty() && peerHivStatus.equalsIgnoreCase("POSITIVE")
+						        && kpPeerPrograms.size() > 0 && !assignee.equalsIgnoreCase("")) {
+							//peer = buildPatientNode(peerPatient, false, assignee);
+							peer.put("record_purpose", "treatment_verification");
+							returnData.setPurpose("treatment_verification");
+						} else {
+							if (kpPeerPrograms.size() > 0 && !assignee.equalsIgnoreCase("")) {
+								//peer = buildPatientNode(peerPatient, false, assignee);
+								peer.put("record_purpose", "kp_followup");
+								returnData.setPurpose("kp_followup");
+							}
+						}
+						
+						peerContactNode.add(peer);
+						
+						responseWrapper.put("docs", peerContactNode);
+						responseWrapper.put("timestamp", formatter.format(new Date()));
+						
+						MedicOutgoingRegistrationService medicOutgoingRegistrationService = Context
+						        .getService(MedicOutgoingRegistrationService.class);
+						if (medicOutgoingRegistrationService.getRecordByPatientId(ptId) == null) {
+							MedicOutgoingRegistration record = new MedicOutgoingRegistration();
+							record.setPatientId(ptId);
+							record.setChtRef(returnData.getChtRef());
+							record.setKemrRef(returnData.getKemrRef());
+							record.setPurpose(returnData.getPurpose());
+							record.setPayload(responseWrapper.toString());
+							record.setStatus(0);
+							
+							System.err.println("AfyaStat Outgoing Registration Queue Peer payload: "
+							        + responseWrapper.toString());
+							
+							medicOutgoingRegistrationService.saveOrUpdate(record);
+						}
+						//start: Get those with cht username
+					}
+					
+				}
+				
+				// if (peer.size() > 0) {
+				// 	peersNode.add(peer);
+				// }
+				
+			}
+			
+		}
+		
+		//return peersNode;
+	}
+	
 	public ArrayNode getKpPeerPeerEductorList() {
 		String PREP_PROGRAM_UUID = "214cad1c-bb62-4d8e-b927-810a046daf62";
 		String KP_PROGRAM_UUID = "7447305a-18a7-11e9-ab14-d663bd873d93";
-		String CHTUSERNAME_ATTRIBUTETYPE_UUID = "1aaead2d-0e88-40b2-abcd-6bc3d20fa43c";
+		String CHTUSERNAME_ATTRIBUTETYPE_UUID = "1aaead2d-0e88-40b2-abcd-6bc3d20fa43c"; //cht username
 		Program prepProgram = MetadataUtils.existing(Program.class, PREP_PROGRAM_UUID);
 		Program kpProgram = MetadataUtils.existing(Program.class, KP_PROGRAM_UUID);
 		Program hivProgram = MetadataUtils.existing(Program.class, HivMetadata._Program.HIV);
@@ -1197,7 +1420,7 @@ public class MedicDataExchange {
 		
 		Set<Integer> peerEducatorList = getAllPeerEducatorsForKPProgram();
 		if (peerEducatorList.size() > 0) {
-			
+			System.err.println("AfyaStat Outgoing Registration Found Peers, now parsing");
 			for (Integer ptId : peerEducatorList) {
 				
 				ObjectNode peer = factory.objectNode();
@@ -1229,11 +1452,25 @@ public class MedicDataExchange {
 					fullPeerEducatorName += " " + p.getFamilyName();
 				}
 				
+				System.err.println("AfyaStat Outgoing Registration Full Educator Name: " + fullPeerEducatorName);
+				
+				//start: Get those with cht username
 				if (p.getAttribute(chtPersonAttributeType) != null
 				        && p.getAttribute(chtPersonAttributeType).getValue() != null) {
 					peerEducatorAssignee = p.getAttribute(chtPersonAttributeType).getValue();
 					
 				}
+				
+				System.err.println("AfyaStat Outgoing Registration peerEducator peerEducatorAssignee: "
+				        + peerEducatorAssignee);
+				System.err.println("AfyaStat Outgoing Registration peerEducator peerEducatorHivStatus: "
+				        + peerEducatorHivStatus);
+				System.err.println("AfyaStat Outgoing Registration peerEducator kpPrograms.size(): " + kpPrograms.size());
+				System.err.println("AfyaStat Outgoing Registration peerEducator peerEducatorHivPrograms: "
+				        + peerEducatorHivPrograms.size());
+				System.err.println("AfyaStat Outgoing Registration peerEducator peerEducatorPrepPrograms: "
+				        + peerEducatorPrepPrograms.size());
+				
 				if (!peerEducatorAssignee.equalsIgnoreCase("")) {
 					peerEducator = buildPatientNode(patient, false, peerEducatorAssignee);
 					
@@ -1257,6 +1494,7 @@ public class MedicDataExchange {
 						}
 					}
 				}
+				//end: Get those relationships with cht usernames
 				
 				for (Relationship relationship : Context.getPersonService().getRelationshipsByPerson(
 				    Context.getPatientService().getPatient(ptId))) {
@@ -1289,11 +1527,24 @@ public class MedicDataExchange {
 						if (relationship.getPersonA().getFamilyName() != null) {
 							fullName += " " + relationship.getPersonA().getFamilyName();
 						}
+						
+						System.err.println("AfyaStat Outgoing Registration Full Relation Name: " + fullName);
+						
+						//start: Get those with cht username
 						if (relationship.getPersonA().getAttribute(chtPersonAttributeType) != null
 						        && relationship.getPersonA().getAttribute(chtPersonAttributeType).getValue() != null) {
 							assignee = relationship.getPersonA().getAttribute(chtPersonAttributeType).getValue();
 							
 						}
+						
+						System.err.println("AfyaStat Outgoing Registration Relation assignee: " + assignee);
+						System.err.println("AfyaStat Outgoing Registration Relation HIV status: " + peerHivStatus);
+						System.err.println("AfyaStat Outgoing Registration Relation kpPeerPrograms.size(): "
+						        + kpPeerPrograms.size());
+						System.err.println("AfyaStat Outgoing Registration Relation peerHivPrograms: "
+						        + peerHivPrograms.size());
+						System.err.println("AfyaStat Outgoing Registration Relation peerPrepPrograms: "
+						        + peerPrepPrograms.size());
 						
 						if (peerPrepPrograms.isEmpty() && peerHivPrograms.isEmpty()
 						        && peerHivStatus.equalsIgnoreCase("NEGATIVE") && kpPeerPrograms.size() > 0
@@ -1310,7 +1561,7 @@ public class MedicDataExchange {
 								peer.put("record_purpose", "kp_followup");
 							}
 						}
-						
+						//start: Get those with cht username
 					}
 					
 				}
@@ -1487,7 +1738,7 @@ public class MedicDataExchange {
 		objectWrapper.put("fields", fields);
 		return objectWrapper;
 	}
-
+	
 	private PatientContactListData buildPatientNodeForQueue(Patient patient, boolean newRegistration, String assignee) {
 		JsonNodeFactory factory = getJsonNodeFactory();
 		ObjectNode objectWrapper = factory.objectNode();
@@ -1613,9 +1864,9 @@ public class MedicDataExchange {
 		}
 		fields.put("assignee", assignee);
 		objectWrapper.put("fields", fields);
-
+		
 		returnData.setContactWrapper(objectWrapper);
-
+		
 		return returnData;
 	}
 	
@@ -1788,10 +2039,13 @@ public class MedicDataExchange {
 		
 		List<List<Object>> activeList = Context.getAdministrationService().executeSQL(sql, true);
 		if (!activeList.isEmpty()) {
+			System.err.println("Afyastat medicOutgoingRegistration Found relationships: " + activeList.size());
 			for (List<Object> res : activeList) {
 				Integer patientId = (Integer) res.get(0);
 				kpList.add(patientId);
 			}
+		} else {
+			System.err.println("Afyastat medicOutgoingRegistration Found no relationships");
 		}
 		return kpList;
 	}
@@ -2160,65 +2414,64 @@ public class MedicDataExchange {
 			this.timestamp = timestamp;
 		}
 	}
-
-    /**
-     * A class to hold contact list for patients
-     */
-    public static class PatientContactListData
-    {
+	
+	/**
+	 * A class to hold contact list for patients
+	 */
+	public static class PatientContactListData {
+		
 		/**
-		* Holds the JSON content
-		*/
-        private ObjectNode contactWrapper;
-
+		 * Holds the JSON content
+		 */
+		private ObjectNode contactWrapper;
+		
 		/**
-		* Holds the CHT ref
-		*/
+		 * Holds the CHT ref
+		 */
 		private String chtRef;
-
+		
 		/**
-		* Holds the KEMR ref
-		*/
+		 * Holds the KEMR ref
+		 */
 		private String kemrRef;
-
+		
 		/**
-		* Holds the purpose
-		*/
+		 * Holds the purpose
+		 */
 		private String purpose;
-
+		
 		public ObjectNode getContactWrapper() {
 			return contactWrapper;
 		}
-
+		
 		public void setContactWrapper(ObjectNode contactWrapper) {
 			this.contactWrapper = contactWrapper;
 		}
-
+		
 		public String getChtRef() {
 			return chtRef;
 		}
-
+		
 		public void setChtRef(String chtRef) {
 			this.chtRef = chtRef;
 		}
-
+		
 		public String getKemrRef() {
 			return kemrRef;
 		}
-
+		
 		public void setKemrRef(String kemrRef) {
 			this.kemrRef = kemrRef;
 		}
-
+		
 		public String getPurpose() {
 			return purpose;
 		}
-
+		
 		public void setPurpose(String purpose) {
 			this.purpose = purpose;
 		}
-
 		
-    }
+	}
 	
 }

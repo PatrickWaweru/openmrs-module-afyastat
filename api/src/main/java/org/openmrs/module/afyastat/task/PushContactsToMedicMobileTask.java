@@ -91,8 +91,7 @@ public class PushContactsToMedicMobileTask extends AbstractTask {
 				
 				//loop
 				Iterator<MedicOutgoingRegistration> payloadIterator = payloads.iterator();
-				while(payloadIterator.hasNext())
-				{
+				while (payloadIterator.hasNext()) {
 					try {
 						//Define a postRequest request
 						HttpPost postRequest = new HttpPost(serverUrl);
@@ -119,8 +118,7 @@ public class PushContactsToMedicMobileTask extends AbstractTask {
 						if (statusCode != 200 && statusCode != 201) {
 							System.err.println("Failed with HTTP error code : " + statusCode);
 							log.info("Failed with HTTP error code : " + statusCode);
-						}
-						else {
+						} else {
 							//mark the upload as successfull
 							e.setContactQueuePayloadStatus(mor.getId());
 						}
@@ -128,8 +126,7 @@ public class PushContactsToMedicMobileTask extends AbstractTask {
 						System.out.println("Successfully pushed a contact to Afyastat");
 						log.info("Successfully pushed a contact to Afyastat");
 					}
-					catch(Exception bn)
-					{
+					catch (Exception bn) {
 						System.err.println("Failed to push a contact to Afyastat: " + bn.getMessage());
 						log.info("Failed to push a contact to Afyastat: " + bn.getMessage());
 					}

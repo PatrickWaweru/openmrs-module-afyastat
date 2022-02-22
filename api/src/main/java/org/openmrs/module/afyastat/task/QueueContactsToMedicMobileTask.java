@@ -40,8 +40,16 @@ public class QueueContactsToMedicMobileTask extends AbstractTask {
 		Context.openSession();
 		try {
 			
-			MedicDataExchange mde = new MedicDataExchange();
-			mde.queueContacts();
+			MedicDataExchange medicDataExchange = new MedicDataExchange();
+			
+			//Queue the contacts
+			medicDataExchange.queueContacts();
+			
+			//Queue the peer educators and peers
+			medicDataExchange.queueKpPeerPeerEductorList();
+			
+			//test payload
+			//medicDataExchange.getContacts();
 			
 			System.err.println("Successfully queued contacts for Afyastat");
 			log.info("Successfully queued contacts for Afyastat");

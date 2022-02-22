@@ -13,6 +13,11 @@
  */
 package org.openmrs.module.afyastat.task;
 
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Iterator;
+
 import com.jayway.jsonpath.JsonPath;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.logging.Log;
@@ -30,7 +35,7 @@ import org.openmrs.module.afyastat.model.ErrorMessagesInfo;
 import org.openmrs.module.afyastat.model.handler.QueueInfoHandler;
 import org.openmrs.util.HandlerUtil;
 
-import java.util.*;
+//import java.util.*;
 
 /**
  */
@@ -54,8 +59,8 @@ public class QueueInfoProcessor {
 			isRunning = true;
 			log.info("Starting up queue data processor ...");
 			InfoService infoService = Context.getService(InfoService.class);
-			List<AfyaStatQueueData> queueDataList = infoService.getAllQueueData();
-			List<QueueInfoHandler> queueDataHandlers = HandlerUtil.getHandlersForType(QueueInfoHandler.class,
+			java.util.List<AfyaStatQueueData> queueDataList = infoService.getAllQueueData();
+			java.util.List<QueueInfoHandler> queueDataHandlers = HandlerUtil.getHandlersForType(QueueInfoHandler.class,
 			    AfyaStatQueueData.class);
 			for (QueueInfoHandler queueDataHandler : queueDataHandlers) {
 				Iterator<AfyaStatQueueData> queueDataIterator = queueDataList.iterator();
