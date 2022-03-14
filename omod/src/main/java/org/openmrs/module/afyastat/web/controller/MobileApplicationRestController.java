@@ -27,7 +27,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	@RequestMapping(method = RequestMethod.POST, value = "/medicregistration")
 	@ResponseBody
 	public Object receiveSHR(HttpServletRequest request) {
-		System.err.println("Afyastat: processing registration data");
+		System.out.println("Afyastat: processing registration data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
