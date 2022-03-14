@@ -27,7 +27,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	@RequestMapping(method = RequestMethod.POST, value = "/medicregistration")
 	@ResponseBody
 	public Object receiveSHR(HttpServletRequest request) {
-		
+		System.err.println("Afyastat: processing registration data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -37,9 +37,9 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.processIncomingRegistration(requestBody);
-			
 		}
 		return new SimpleObject().add("Report", "The request could not be interpreted properly");
 	}
@@ -54,6 +54,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	// end point for medic queue data
 	@ResponseBody
 	public Object processMedicQueueData(HttpServletRequest request) {
+		System.err.println("Afyastat: processing medic queue data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -63,6 +64,7 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.processIncomingFormData(requestBody);
 			
@@ -80,6 +82,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	// end point for medic contacts data
 	@ResponseBody
 	public Object processMedicContactsData(HttpServletRequest request) {
+		System.err.println("Afyastat: processing contacts data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -89,6 +92,7 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.addContactListToDataqueue(requestBody);
 			
@@ -106,6 +110,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	// end point for medic contact trace data
 	@ResponseBody
 	public Object processMedicContactTraceData(HttpServletRequest request) {
+		System.err.println("Afyastat: processing contacts trace data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -115,6 +120,7 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.addContactTraceToDataqueue(requestBody);
 			
@@ -132,6 +138,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	// end point for processing demographic updates
 	@ResponseBody
 	public Object processDemographicUpdates(HttpServletRequest request) {
+		System.err.println("Afyastat: processing demographic updates data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -141,6 +148,7 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.processDemographicsUpdate(requestBody);
 			
@@ -158,6 +166,7 @@ public class MobileApplicationRestController extends BaseRestController {
 	// end point for processing peer calender information
 	@ResponseBody
 	public Object processPeerCalenderForm(HttpServletRequest request) {
+		System.err.println("Afyastat: processing peer calendar data");
 		String requestBody = null;
 		try {
 			requestBody = Utils.fetchRequestBody(request.getReader());
@@ -167,6 +176,7 @@ public class MobileApplicationRestController extends BaseRestController {
 		}
 		
 		if (requestBody != null) {
+			System.err.println("Afyastat: Incoming Data: " + requestBody);
 			MedicDataExchange shr = new MedicDataExchange();
 			return shr.processPeerCalenderFormData(requestBody);
 			
