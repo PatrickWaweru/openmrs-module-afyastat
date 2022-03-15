@@ -8,8 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.openmrs.module.afyastat.api.service.InfoService;
+import org.openmrs.module.afyastat.model.AfyaStatErrorData;
 import org.openmrs.module.afyastat.model.AfyaStatQueueData;
-import org.openmrs.module.afyastat.model.ErrorInfo;
 import org.openmrs.module.afyastat.model.ErrorMessagesInfo;
 import org.openmrs.module.kenyaui.KenyaUiUtils;
 import org.openmrs.module.kenyaui.annotation.AppPage;
@@ -32,7 +32,7 @@ public class AfyastatHomePageController {
 		InfoService infoService = Context.getService(InfoService.class);
 		
 		List<AfyaStatQueueData> queueDataList = infoService.getAllQueueData();
-		List<ErrorInfo> allErrors = infoService.getAllErrorData();
+		List<AfyaStatErrorData> allErrors = infoService.getAllErrorData();
 		//Collections.sort(allErrors, new ErrorQueueDateComparator());
 		
 		Collections.sort(queueDataList, new Comparator<AfyaStatQueueData>() {
@@ -44,10 +44,10 @@ public class AfyastatHomePageController {
 			}
 		});
 		
-		Collections.sort(allErrors, new Comparator<ErrorInfo>() {
+		Collections.sort(allErrors, new Comparator<AfyaStatErrorData>() {
 			
 			@Override
-			public int compare(ErrorInfo a, ErrorInfo b) {
+			public int compare(AfyaStatErrorData a, AfyaStatErrorData b) {
 				//return a.getDateProcessed().before(b.getDateProcessed()) ? -1 : a.getDateProcessed() == b.getDateProcessed() ? 0 : 1;
 				return a.getDateProcessed().after(b.getDateProcessed()) ? -1
 				        : a.getDateProcessed() == b.getDateProcessed() ? 0 : 1;
@@ -85,7 +85,7 @@ public class AfyastatHomePageController {
 			queueList.add(queueObject);
 		}
 		
-		for (ErrorInfo eObj : allErrors) {
+		for (AfyaStatErrorData eObj : allErrors) {
 			List<String> errorMessages = new ArrayList<String>();
 			
 			for (ErrorMessagesInfo info : eObj.getErrorMessages()) {

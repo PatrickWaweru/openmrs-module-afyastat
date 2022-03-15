@@ -34,9 +34,9 @@ import org.openmrs.module.afyastat.api.service.RegistrationInfoService;
 import org.openmrs.module.afyastat.exception.StreamProcessorException;
 import org.openmrs.module.afyastat.metadata.AfyaStatMetadata;
 import org.openmrs.module.afyastat.model.AfyaDataSource;
+import org.openmrs.module.afyastat.model.AfyaStatErrorData;
 import org.openmrs.module.afyastat.model.AfyaStatQueueData;
 import org.openmrs.module.afyastat.model.ArchiveInfo;
-import org.openmrs.module.afyastat.model.ErrorInfo;
 import org.openmrs.module.afyastat.model.ErrorMessagesInfo;
 import org.openmrs.module.afyastat.model.FormInfoStatus;
 import org.openmrs.module.afyastat.model.RegistrationInfo;
@@ -208,7 +208,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should return null when no error data with matching id.
 	 */
 	@Override
-	public ErrorInfo getErrorData(final Integer id) {
+	public AfyaStatErrorData getErrorData(final Integer id) {
 		return getErrorInfoDao().getData(id);
 	}
 	
@@ -221,7 +221,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should return null when no error data with matching uuid.
 	 */
 	@Override
-	public ErrorInfo getErrorDataByUuid(final String uuid) {
+	public AfyaStatErrorData getErrorDataByUuid(final String uuid) {
 		return getErrorInfoDao().getDataByUuid(uuid);
 	}
 	
@@ -234,10 +234,10 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should return null when no registration error data with matching patientUuid.
 	 */
 	@Override
-	public ErrorInfo getRegistrationErrorDataByPatientUuid(String patientUuid) {
+	public AfyaStatErrorData getRegistrationErrorDataByPatientUuid(String patientUuid) {
 		
-		List<ErrorInfo> errors = getErrorInfoDao().getPagedData(patientUuid, null, null);
-		for (ErrorInfo errorData : errors) {
+		List<AfyaStatErrorData> errors = getErrorInfoDao().getPagedData(patientUuid, null, null);
+		for (AfyaStatErrorData errorData : errors) {
 			if (StringUtils.equals("json-registration", errorData.getDiscriminator())) {
 				return errorData;
 			}
@@ -253,7 +253,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should return all saved error data.
 	 */
 	@Override
-	public List<ErrorInfo> getAllErrorData() {
+	public List<AfyaStatErrorData> getAllErrorData() {
 		return getErrorInfoDao().getAllData();
 	}
 	
@@ -265,7 +265,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should save error data into the database.
 	 */
 	@Override
-	public ErrorInfo saveErrorData(final ErrorInfo errorInfo) {
+	public AfyaStatErrorData saveErrorData(final AfyaStatErrorData errorInfo) {
 		return getErrorInfoDao().saveData(errorInfo);
 	}
 	
@@ -276,7 +276,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @should remove error data from the database
 	 */
 	@Override
-	public void purgeErrorData(final ErrorInfo errorInfo) {
+	public void purgeErrorData(final AfyaStatErrorData errorInfo) {
 		getErrorInfoDao().purgeData(errorInfo);
 	}
 	
@@ -301,7 +301,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	 * @return list of all error data with matching search term for a particular page.
 	 */
 	@Override
-	public List<ErrorInfo> getPagedErrorData(final String search, final Integer pageNumber, final Integer pageSize) {
+	public List<AfyaStatErrorData> getPagedErrorData(final String search, final Integer pageNumber, final Integer pageSize) {
 		return errorInfoDao.getPagedData(search, pageNumber, pageSize);
 	}
 	
@@ -344,12 +344,12 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	}
 	
 	@Override
-	public List<ErrorInfo> getErrorDataByFormDataUuid(final String formDataUuid) {
+	public List<AfyaStatErrorData> getErrorDataByFormDataUuid(final String formDataUuid) {
 		return getErrorInfoDao().getAllDataByFormDataUuid(formDataUuid);
 	}
 	
 	@Override
-	public ErrorInfo getErrorDataByFormDataUuiDateFormFilledAndPatientUuid(final String formDataUuid,
+	public AfyaStatErrorData getErrorDataByFormDataUuiDateFormFilledAndPatientUuid(final String formDataUuid,
 	        final Long dateFormFilled, String patientUuid) {
 		return getErrorInfoDao()
 		        .getDataByFormDataUuidDateFormFilledAndPatientUuid(formDataUuid, dateFormFilled, patientUuid);
@@ -551,7 +551,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	@Override
 	public List<ErrorMessagesInfo> validateData(String uuid, String formData) {
 		List<ErrorMessagesInfo> errorMessages = new ArrayList<ErrorMessagesInfo>();
-		ErrorInfo errorInfo = getErrorDataByUuid(uuid);
+		AfyaStatErrorData errorInfo = getErrorDataByUuid(uuid);
 		errorInfoDao.detachDataFromHibernateSession(errorInfo);
 		errorInfo.setPayload(formData);
 		
@@ -601,7 +601,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	public List<AfyaStatQueueData> mergeDuplicatePatient(@NotNull final String errorDataUuid,
 	        @NotNull final String existingPatientUuid, @NotNull final String payload) {
 		List<AfyaStatQueueData> requeued = new ArrayList<AfyaStatQueueData>();
-		ErrorInfo errorInfo = this.getErrorDataByUuid(errorDataUuid);
+		AfyaStatErrorData errorInfo = this.getErrorDataByUuid(errorDataUuid);
 		errorInfo.setPayload(payload);
 		String submittedPatientUuid = errorInfo.getPatientUuid();
 		
@@ -621,8 +621,8 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 		
 		// Fetch all ErrorData associated with the patient UUID (the one determined to be of a duplicate patient).
 		int countOfErrors = this.countErrorData(submittedPatientUuid).intValue();
-		List<ErrorInfo> allToRequeue = this.getPagedErrorData(submittedPatientUuid, 1, countOfErrors);
-		for (ErrorInfo errorData1 : allToRequeue) {
+		List<AfyaStatErrorData> allToRequeue = this.getPagedErrorData(submittedPatientUuid, 1, countOfErrors);
+		for (AfyaStatErrorData errorData1 : allToRequeue) {
 			afyaStatQueueData = new AfyaStatQueueData(errorData1);
 			afyaStatQueueData = this.saveQueueData(afyaStatQueueData);
 			this.purgeErrorData(errorData1);
@@ -687,9 +687,9 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 		if (Context.isAuthenticated()) {
 			
 			if (errorList.equals("all")) {
-				List<ErrorInfo> errors = getAllErrorData();
+				List<AfyaStatErrorData> errors = getAllErrorData();
 				
-				for (ErrorInfo errorData : errors) {
+				for (AfyaStatErrorData errorData : errors) {
 					AfyaStatQueueData queueData = new AfyaStatQueueData(errorData);
 					saveQueueData(queueData);
 					purgeErrorData(errorData);
@@ -697,7 +697,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 			} else {
 				String[] uuidList = errorList.split(",");
 				for (String uuid : uuidList) {
-					ErrorInfo errorData = getErrorDataByUuid(uuid);
+					AfyaStatErrorData errorData = getErrorDataByUuid(uuid);
 					AfyaStatQueueData queueData = new AfyaStatQueueData(errorData);
 					saveQueueData(queueData);
 					purgeErrorData(errorData);
@@ -711,15 +711,15 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 		if (Context.isAuthenticated()) {
 			
 			if (errorList.equals("all")) {
-				List<ErrorInfo> errors = getAllErrorData();
+				List<AfyaStatErrorData> errors = getAllErrorData();
 				
-				for (ErrorInfo errorData : errors) {
+				for (AfyaStatErrorData errorData : errors) {
 					purgeErrorData(errorData);
 				}
 			} else {
 				String[] uuidList = errorList.split(",");
 				for (String uuid : uuidList) {
-					ErrorInfo errorData = getErrorDataByUuid(uuid);
+					AfyaStatErrorData errorData = getErrorDataByUuid(uuid);
 					purgeErrorData(errorData);
 				}
 			}
@@ -729,7 +729,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	@Override
 	public void createAsNewRegistration(String queueUuid) {
 		if (Context.isAuthenticated()) {
-			ErrorInfo errorData = getErrorDataByUuid(queueUuid);
+			AfyaStatErrorData errorData = getErrorDataByUuid(queueUuid);
 			ObjectMapper objectMapper = new ObjectMapper();
 			JsonNode jsonNode = null;
 			try {
@@ -757,8 +757,8 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 			// Fetch all ErrorData associated with the patient UUID (the one determined to be of a duplicate patient).
 			int countOfErrors = countErrorData(submittedPatientUuid).intValue();
 			if (countOfErrors > 0) {
-				List<ErrorInfo> allToRequeue = getPagedErrorData(submittedPatientUuid, 1, countOfErrors);
-				for (ErrorInfo errorData1 : allToRequeue) {
+				List<AfyaStatErrorData> allToRequeue = getPagedErrorData(submittedPatientUuid, 1, countOfErrors);
+				for (AfyaStatErrorData errorData1 : allToRequeue) {
 					AfyaStatQueueData afyaStatQueueData = new AfyaStatQueueData(errorData1);
 					afyaStatQueueData = saveQueueData(afyaStatQueueData);
 					saveQueueData(afyaStatQueueData);

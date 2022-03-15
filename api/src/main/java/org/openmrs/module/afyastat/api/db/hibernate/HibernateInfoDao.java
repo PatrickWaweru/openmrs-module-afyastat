@@ -19,8 +19,8 @@ import org.apache.commons.logging.LogFactory;
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.*;
+import org.openmrs.BaseOpenmrsData;
 import org.openmrs.module.afyastat.api.db.InfoDao;
-import org.openmrs.module.afyastat.model.Info;
 import org.openmrs.module.afyastat.model.handler.InfoHandler;
 import org.openmrs.util.HandlerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  */
-public abstract class HibernateInfoDao<T extends Info> extends HibernateSingleClassInfoDao<T> implements InfoDao<T> {
+public abstract class HibernateInfoDao<T extends BaseOpenmrsData> extends HibernateSingleClassInfoDao<T> implements InfoDao<T> {
 	
 	@Autowired
 	protected SessionFactory sessionFactory;
