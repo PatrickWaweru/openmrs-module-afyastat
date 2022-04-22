@@ -281,7 +281,7 @@ public class InfoServiceImpl extends BaseOpenmrsService implements InfoService {
 	@Override
 	public List<ErrorInfo> getAllErrorsExceptRegistrationErrors() {
 		
-		List<ErrorInfo> errors = getErrorInfoDao().getDataExceptByDiscriminator("json-registration");
+		List<ErrorInfo> errors = getErrorInfoDao().getDataExcludeDiscriminator("json-registration");
 		return errors;
 	}
 	

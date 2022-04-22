@@ -106,6 +106,14 @@ public interface InfoDao<T extends Info> extends SingleClassInfoDao<T> {
 	 * @return list of data.
 	 */
 	public List<T> getDataByDiscriminator(final String discriminator);
+
+	/**
+	 * Get data matching the list of discriminators
+	 * 
+	 * @param discriminators the list of discriminators
+	 * @return list of data.
+	 */
+	public List<T> getDataByDiscriminator(final List<String> discriminators);
 	
 	/**
 	 * Get all data except matching the discriminator
@@ -113,7 +121,15 @@ public interface InfoDao<T extends Info> extends SingleClassInfoDao<T> {
 	 * @param discriminator the discriminator.
 	 * @return list of data.
 	 */
-	public List<T> getDataExceptByDiscriminator(final String discriminator);
+	public List<T> getDataExcludeDiscriminator(final String discriminator);
+
+	/**
+	 * Get all data except that matching the list of discriminators
+	 * 
+	 * @param discriminators the list of discriminators
+	 * @return list of data.
+	 */
+	public List<T> getDataExcludeDiscriminator(final List<String> discriminators);
 	
 	/**
 	 * Get the total number of data with matching search term.
